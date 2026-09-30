@@ -30,6 +30,7 @@ iface eth5 inet static
     netmask 255.255.255.0
 EOF
 
+# Quest 2
 apt update
 which iptables &>/dev/null || apt install iptables -y
 
