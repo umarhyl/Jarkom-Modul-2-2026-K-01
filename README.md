@@ -625,6 +625,23 @@ nslookup -type=txt delta.k01.com
 nslookup -type=txt epilson.k01.com
 ```
 
+Jalankan DNS dari masing-masing node klien:
+
+Alpha
+![Hasil DNS node Alpha](assets/Soal-17-Alpha.png)
+
+Beta
+![Hasil DNS node Beta](assets/Soal-17-Beta.png)
+
+Gamma
+![Hasil DNS node Gamma](assets/Soal-17-Gamma.png)
+
+Delta
+![Hasil DNS node Delta](assets/Soal-17-Delta.png)
+
+Epilson
+![Hasil DNS node Epilson](assets/Soal-17-Epilson.png)
+
 ### 18. Modifikasi A record, kenaikan SOA serial, dan pengujian TTL cache
 
 A record milik `abbey.k01.com` diubah ke IP fiktif `10.200.200.1` dengan nilai TTL 15 detik, diikuti
