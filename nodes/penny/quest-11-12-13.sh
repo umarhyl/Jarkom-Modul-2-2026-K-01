@@ -4,6 +4,19 @@ apt update && apt install apache2 -y
 
 a2enmod proxy proxy_http proxy_balancer lbmethod_byrequests headers
 
+mkdir -p /var/www/html/admin
+cat << 'EOF' > /var/www/html/admin/index.html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin</title>
+</head>
+<body>
+    <h1>Selamat datang di halaman admin</h1>
+</body>
+</html>
+EOF
+
 cat << 'EOF' > /etc/apache2/sites-available/penny-proxy.conf
 <VirtualHost *:80>
     ServerName penny.k01.com
@@ -14,9 +27,6 @@ cat << 'EOF' > /etc/apache2/sites-available/penny-proxy.conf
 
 <VirtualHost *:80>
     ServerName www.k01.com
-
-    # Quest 13
-    Redirect 301 / http://www.k01.com/
 
     # Meneruskan header Host asli
     ProxyPreserveHost On
@@ -46,7 +56,7 @@ cat << 'EOF' > /etc/apache2/sites-available/penny-proxy.conf
 </VirtualHost>
 EOF
 
-htpasswd -bc /etc/apache2/.htpasswd prabs "pakar_pinter_jadi_gob***"
+htpasswd -bc /etc/apache2/.htpasswd prabs "pakar_pinter_jadi_goblok"
 
 a2enmod auth_basic authn_core authz_user
 a2ensite penny-proxy.conf

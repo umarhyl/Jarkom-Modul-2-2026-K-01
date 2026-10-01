@@ -1,6 +1,6 @@
 #!/bin/sh
 
-cat <<EOF >> /etc/bind/db.k01.com
+cat <<EOF >> /etc/bind/k01/k01.com
 alpha   IN      A       10.64.3.2
 beta    IN      A       10.64.3.3
 gamma   IN      A       10.64.3.4
@@ -13,3 +13,5 @@ desmond IN      A       10.64.1.5
 oblada  IN      A       10.64.1.6
 molly   IN      A       10.64.1.7
 EOF
+
+service bind9 restart
