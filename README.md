@@ -467,8 +467,5 @@ curl -I http://penny.k01.com/
 curl -I http://abbey.k01.com/
 ```
 
-- Client curl http://penny.k01.com/ (redirect 301)
-![client curl penny.k01.com redirect 301](assets/alpha-20.png)
-
-- Client curl http://abbey.k01.com/ (redirect 302)
-![client curl abbey.k01.com redirect 302](assets/alpha-21.png)
+- Client curl http://penny.k01.com/ (redirect 301) & http://abbey.k01.com/ (redirect 302)
+![client curl penny.k01.com redirect 301 & abbey.k01.com redirect 302](assets/alpha-20.png)
