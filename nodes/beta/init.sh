@@ -8,11 +8,6 @@ iface eth0 inet static
     gateway 10.64.3.1
 EOF
 
-# Quest 3
-cat <<EOF > /etc/resolv.conf
-nameserver 192.168.122.1
-EOF
-
 # Quest 3 & 4
 cat <<EOF > /etc/resolv.conf
 nameserver 10.64.1.2
