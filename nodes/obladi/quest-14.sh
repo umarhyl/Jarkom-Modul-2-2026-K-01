@@ -1,5 +1,6 @@
 #!/bin/sh
 
+apt-get update && apt-get install apache2 -y
 a2enmod remoteip
 
 cat <<EOF > /etc/apache2/apache2.conf
