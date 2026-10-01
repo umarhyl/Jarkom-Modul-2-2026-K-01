@@ -595,6 +595,11 @@ ab -n 250 -c 10 http://www.k01.com/
 # Stress test ke static.k01.com
 ab -n 250 -c 10 http://static.k01.com/
 ```
+Rangkuman Hasil Stress Test `www.k01.com`
+![Hasil www.k01.com Stress Test](assets/Soal-16-www.k01.com.png)
+
+Rangkuman Hasil Stress Test `static.k01.com`
+![Hasil static.k01.com Stress Test](assets/Soal-16-static.k01.com.png)
 
 ### 17. Penambahan TXT record DNS klien
 Penambahan TXT record pada DNS server untuk seluruh klien sayap kiri dan kanan (`alpha`, `beta`,
