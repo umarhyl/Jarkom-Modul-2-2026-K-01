@@ -12,3 +12,10 @@ EOF
 cat <<EOF > /etc/resolv.conf
 nameserver 192.168.122.1
 EOF
+
+# Quest 20
+/root/quest-4.sh
+/root/quest-5.sh
+/root/quest-7.sh
+/root/quest-8.sh
+/root/quest-19.sh

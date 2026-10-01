@@ -14,3 +14,8 @@ nameserver 10.64.1.2
 nameserver 10.64.1.3
 nameserver 192.168.122.1
 EOF
+
+# Quest 20
+/root/quest-9.sh
+/root/quest-14.sh
+/root/quest-18.sh
