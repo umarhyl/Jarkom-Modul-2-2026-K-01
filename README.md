@@ -469,3 +469,188 @@ curl -I http://abbey.k01.com/
 
 - Client curl http://penny.k01.com/ (redirect 301) & http://abbey.k01.com/ (redirect 302)
 ![client curl penny.k01.com redirect 301 & abbey.k01.com redirect 302](assets/alpha-20.png)
+
+### 14. Pencatatan IP Asli Client (Real IP Logging)
+Setiap server web di area vault maupun core dikonfigurasi untuk mencatat alamat IP asli milik client
+pengunjung yang diteruskan oleh gerbang melalui header X-Forwarded-For, bukan mencatat IP proxy
+milik Penny maupun Abbey.
+
+Konfigurasi real IP pada server Nginx (`molly` dan `oblada`):
+
+```nginx
+set_real_ip_from 10.64.2.2;
+real_ip_header X-Forwarded-For;
+real_ip_recursive on;
+```
+
+Konfigurasi remote IP pada server Apache (`desmond` dan `obladi`):
+
+```apache
+RemoteIPHeader X-Forwarded-For
+RemoteIPInternalProxy 10.64.4.2
+```
+
+Penyesuaian format log pada `/etc/apache2/apache2.conf`:
+
+```bash
+sed -i 's/%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"/%a %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"/' /etc/apache2/apache2.conf
+```
+
+### 15. Jalur proxy khusus /eternal dan /orion
+Pada `penny` dibuat reverse proxy untuk path `/eternal` yang menyajikan direktori `/var/www/eternal`
+serta dapat mengeksekusi/rendering file PHP. Pada `abbey` dibuat reverse proxy untuk path `/orion`
+yang menyajikan direktori `/var/www/orion` secara murni statis tanpa rendering PHP.
+Konfigurasi reverse proxy pada `abbey` (`/etc/nginx/sites-available/abbey-proxy-khusus`):
+
+```nginx
+upstream corecluster {
+    server 10.64.1.6; # IP Oblada
+    server 10.64.1.7; # IP Molly
+}
+
+upstream pennycluster {
+    server 10.64.1.8; # IP Penny
+    server 10.64.1.9; # IP Desmond
+}
+
+server {
+    listen 80;
+    server_name abbey.k01.com 10.64.2.2;
+
+    location /orion {
+        proxy_pass http://corecluster;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    location /eternal {
+        proxy_pass http://pennycluster;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+```
+
+Konfigurasi virtual host pada `penny` (`/etc/apache2/sites-available/penny-eternal.conf`):
+
+```apache
+<VirtualHost *:80>
+    ServerName penny.k01.com
+    DocumentRoot /var/www
+
+    <Directory /var/www/eternal>
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    ErrorLog ${APACHE_LOG_DIR}/error.log
+    CustomLog ${APACHE_LOG_DIR}/access.log combined
+</VirtualHost>
+```
+
+Konfigurasi penyajian statis murni pada `molly` dan `oblada`:
+
+```nginx
+server {
+    listen 80;
+    server_name localhost;
+
+    root /var/www;
+    index index.html index.htm;
+
+    location /orion {
+        try_files $uri $uri/ =404;
+    }
+}
+```
+
+Konfigurasi alias path pada backend Apache `desmond` dan `obladi`:
+
+```apache
+Alias /eternal /var/www/eternal
+
+<Directory /var/www/eternal>
+    Options Indexes FollowSymLinks
+    AllowOverride All
+    Require all granted
+</Directory>
+```
+
+### 16. Benchmark dan stress test menggunakan ApacheBench
+Pengujian ketahanan gerbang dilakukan dari klien `alpha` menggunakan ApacheBench dengan
+mengirimkan 250 requests dan tingkat konkurensi 10 untuk masing-masing titik akhir `www.k01.com`
+dan `static.k01.com`.
+Perintah instalasi dan stress test pada `alpha`:
+
+```bash
+# Instalasi ApacheBench
+apt-get update && apt-get install apache2-utils -y
+
+# Stress test ke www.k01.com
+ab -n 250 -c 10 http://www.k01.com/
+
+# Stress test ke static.k01.com
+ab -n 250 -c 10 http://static.k01.com/
+```
+
+### 17. Penambahan TXT record DNS klien
+Penambahan TXT record pada DNS server untuk seluruh klien sayap kiri dan kanan (`alpha`, `beta`,
+`gamma`, `delta`, `epilson`). Query TXT terhadap nama domain klien mengembalikan teks berupa nama
+hostname masing-masing.
+Konfigurasi TXT record pada forward zone `prab` (`/etc/bind/k01/k01.com`):
+
+```DNS zone file
+alpha   IN  TXT "alpha"
+beta    IN  TXT "beta"
+gamma   IN  TXT "gamma"
+delta   IN  TXT "delta"
+eplison IN  TXT "eplison"
+```
+
+Perintah verifikasi kueri DNS dari setiap klien:
+
+```bash
+nslookup -type=txt alpha.k01.com
+nslookup -type=txt beta.k01.com
+nslookup -type=txt gamma.k01.com
+nslookup -type=txt delta.k01.com
+nslookup -type=txt epilson.k01.com
+```
+
+### 18. Modifikasi A record, kenaikan SOA serial, dan pengujian TTL cache
+
+A record milik `abbey.k01.com` diubah ke IP fiktif `10.200.200.1` dengan nilai TTL 15 detik, diikuti
+penaikan nilai serial SOA di `prab` agar `tedd` tersinkron. Pengujian dilakukan dalam tiga fase pencarian:
+sebelum perubahan, dalam jeda 15 detik (masih IP lama karena cache), dan setelah batas TTL habis
+(berubah ke IP fiktif).
+Konfigurasi pembaruan record dan penaikan serial di `prab`:
+
+```bash
+ZONE_FILE="/etc/bind/k01/k01.com"
+
+# Ubah IP menjadi fiktif dengan TTL 15 detik
+sed -i 's/abbey.*IN.*A.*10.64.2.2/abbey 15 IN A 10.200.200.1/g' $ZONE_FILE
+
+# Naikkan Serial SOA menggunakan timestamp
+sed -i "s/[0-9]\{8,10\}/$(date +%s)/g" $ZONE_FILE
+
+# Restart layanan DNS
+service named restart || /etc/init.d/named restart
+```
+
+Skrip verifikasi tiga fase di `alpha` (`/root/cek_ttl_dns.sh`):
+
+```bash
+#!/bin/sh
+# FASE 1: Sebelum Perubahan (Target: IP Lama 10.64.2.2)
+dig abbey.k01.com +short
+# FASE 2: Dalam Jeda Waktu TTL 15 Detik (Masih IP Lama)
+dig abbey.k01.com +short
+# Menghitung mundur 16 detik agar TTL cache habis
+sleep 16
+# FASE 3: Setelah TTL Habis (Target: IP Baru 10.200.200.1)
+dig abbey.k01.com +short
+```
