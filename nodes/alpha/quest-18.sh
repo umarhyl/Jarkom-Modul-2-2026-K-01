@@ -18,6 +18,8 @@ echo
 echo ">>> SEKARANG jalankan 'sh quest-18.sh' di PRAB <<<"
 echo
 
+sleep 5
+
 for i in $(seq 1 35); do
   echo "$(date +%T) -> $(dig abbey.k01.com +noall +answer | awk '{print "TTL="$2, $5}')"
   sleep 1
