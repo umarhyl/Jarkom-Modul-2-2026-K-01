@@ -2,6 +2,10 @@
 
 apt-get update && apt-get install apache2 -y
 
+cat << 'EOF' > /var/www/html/index.html
+Web Server Obladi
+EOF
+
 mkdir -p /var/www/html/arsip
 
 cat << 'EOF' > /etc/apache2/sites-available/k01-vault.conf
