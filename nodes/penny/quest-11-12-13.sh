@@ -1,6 +1,6 @@
 #!/bin/sh
 
-apt update && apt install apache2 -y
+apt-get update && apt-get install apache2 php-fpm -y
 
 a2enmod proxy proxy_http proxy_balancer lbmethod_byrequests headers
 
@@ -22,6 +22,9 @@ cat << 'EOF' > /etc/apache2/sites-available/penny-proxy.conf
     ServerName penny.k01.com
     ServerAlias 10.64.4.2
 
+    # Quest 15 (harus sebelum Redirect)
+    IncludeOptional /etc/apache2/eternal.inc
+
     Redirect 301 / http://www.k01.com/
 </VirtualHost>
 
@@ -32,6 +35,9 @@ cat << 'EOF' > /etc/apache2/sites-available/penny-proxy.conf
     ProxyPreserveHost On
 
     ProxyPass /admin !
+
+    # Quest 15
+    IncludeOptional /etc/apache2/eternal.inc
 
     # Cluster Load Balancing untuk area vault (obladi & desmond)
     <Proxy balancer://vaultcluster>

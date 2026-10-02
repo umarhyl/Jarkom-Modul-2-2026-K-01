@@ -1,12 +1,10 @@
 #!/bin/sh
 
-apt update && apt install nginx -y
-
 mkdir -p /var/www/orion
 
 echo "Halo dari direktori /var/www/orion untuk proxy khusus" > /var/www/orion/index.html
 
-cat << 'EOF' > /etc/apache2/sites-available/proxy-khusus
+cat << 'EOF' > /etc/nginx/sites-available/proxy-khusus
 server {
     listen 80;
     server_name localhost;

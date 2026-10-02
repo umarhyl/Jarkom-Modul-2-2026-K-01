@@ -1,6 +1,5 @@
 #!/bin/sh
 
-apt-get update && apt-get install apache2 -y
 echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
 mkdir -p /var/www/eternal

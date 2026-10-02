@@ -418,7 +418,7 @@ ProxyPass /admin !
 Kredensial dibuat pada node `penny`:
 
 ```bash
-htpasswd -bc /etc/apache2/.htpasswd prabs "pakar_pinter_jadi_gob***"
+htpasswd -bc /etc/apache2/.htpasswd prabs "pakar_pinter_jadi_goblok"
 a2enmod auth_basic authn_core authz_user
 service apache2 restart
 ```
@@ -427,7 +427,7 @@ Pengujian:
 
 ```bash
 curl -i http://www.k01.com/admin
-curl -i -u prabs:'pakar_pinter_jadi_gob***' http://www.k01.com/admin
+curl -i -u prabs:'pakar_pinter_jadi_goblok' http://www.k01.com/admin
 ```
 
 - Client curl http://www.k01.com/admin tanpa kredensial

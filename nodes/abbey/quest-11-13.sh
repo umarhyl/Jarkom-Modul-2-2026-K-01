@@ -2,6 +2,9 @@
 
 apt update && apt install nginx -y
 
+# Quest 15
+mkdir -p /etc/nginx/abbey-locations
+
 cat << 'EOF' > /etc/nginx/sites-available/abbey-proxy
 upstream corecluster {
     server 10.64.1.6;
@@ -13,7 +16,12 @@ server {
     listen 80;
     server_name abbey.k01.com 10.64.2.2;
 
-    return 302 http://static.k01.com$request_uri;
+    # Quest 15
+    include /etc/nginx/abbey-locations/*.conf;
+
+    location / {
+        return 302 http://static.k01.com$request_uri;
+    }
 }
 
 # Reverse proxy untuk static.k01.com

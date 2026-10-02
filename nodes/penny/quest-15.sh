@@ -1,29 +1,33 @@
 #!/bin/sh
 
-apt-get update && apt-get install apache2 -y
+apt-get install -y php-fpm
+
+a2enmod proxy proxy_http proxy_fcgi
+
 mkdir -p /var/www/eternal
-echo "Jalur /eternal milik Penny" > /var/www/eternal/index.html
+echo "<?php phpinfo();" > /var/www/eternal/index.php
+chown -R www-data:www-data /var/www/eternal
 
-cat << 'EOF' > /etc/apache2/sites-available/penny-eternal.conf
-<VirtualHost *:80>
-    ServerName penny.k01.com
-    
-    # DocumentRoot diarahkan ke /var/www agar request /eternal
-    # langsung mengarah ke /var/www/eternal
-    DocumentRoot /var/www
+# Nyalakan php-fpm dan cari socket-nya otomatis
+for s in /etc/init.d/php*-fpm; do $s start; done
+sleep 1
+SOCK=$(ls /run/php/php*-fpm.sock | head -1)
+echo "Socket: $SOCK"
 
-    <Directory /var/www/eternal>
-        Options Indexes FollowSymLinks
-        AllowOverride All
-        Require all granted
-    </Directory>
+cat << 'EOF' > /etc/apache2/eternal.inc
+# Jalur /eternal: jangan diteruskan ke balancer
+ProxyPass /eternal !
 
-    ErrorLog ${APACHE_LOG_DIR}/error.log
-    CustomLog ${APACHE_LOG_DIR}/access.log combined
-</VirtualHost>
+Alias /eternal /var/www/eternal
+<Directory /var/www/eternal>
+    Require all granted
+    DirectoryIndex index.php index.html
+    <FilesMatch "\.php$">
+        SetHandler "proxy:unix:SOCK_PATH|fcgi://localhost"
+    </FilesMatch>
+</Directory>
 EOF
 
-a2ensite penny-eternal.conf
-a2dissite 000-default.conf
+sed -i "s#SOCK_PATH#$SOCK#" /etc/apache2/eternal.inc
 
-service apache2 restart
+apache2ctl configtest && service apache2 restart
