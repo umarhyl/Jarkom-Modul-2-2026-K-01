@@ -699,35 +699,120 @@ Epilson
 
 ### 18. Modifikasi A record, kenaikan SOA serial, dan pengujian TTL cache
 
-A record milik `abbey.k01.com` diubah ke IP fiktif `10.200.200.1` dengan nilai TTL 15 detik, diikuti
-penaikan nilai serial SOA di `prab` agar `tedd` tersinkron. Pengujian dilakukan dalam tiga fase pencarian:
-sebelum perubahan, dalam jeda 15 detik (masih IP lama karena cache), dan setelah batas TTL habis
-(berubah ke IP fiktif).
-Konfigurasi pembaruan record dan penaikan serial di `prab`:
+Pada zona DNS `prab`, record A `abbey.k01.com` diubah dari `10.64.2.2`
+menjadi `10.200.200.1` dengan TTL 15 detik. Perubahan dilakukan menggunakan
+`nodes/prab/quest-18.sh`. Script ini juga menaikkan serial SOA dan memuat ulang
+zona dengan `rndc reload`.
+
+Cuplikan script perubahan pada `prab`:
 
 ```bash
 ZONE_FILE="/etc/bind/k01/k01.com"
 
-# Ubah IP menjadi fiktif dengan TTL 15 detik
-sed -i 's/abbey.*IN.*A.*10.64.2.2/abbey 15 IN A 10.200.200.1/g' $ZONE_FILE
+sed -i 's/^abbey.*/abbey   15   IN   A   10.200.200.1/' $ZONE_FILE
 
-# Naikkan Serial SOA menggunakan timestamp
-sed -i "s/[0-9]\{8,10\}/$(date +%s)/g" $ZONE_FILE
+SERIAL=$(grep -m1 'Serial' $ZONE_FILE | grep -oE '[0-9]{10}')
+NEW=$((SERIAL + 1))
+sed -i "/Serial/s/$SERIAL/$NEW/" $ZONE_FILE
 
-# Restart layanan DNS
-service named restart || /etc/init.d/named restart
+named-checkzone k01.com $ZONE_FILE && rndc reload
 ```
 
-Skrip verifikasi tiga fase di `alpha` (`/root/cek_ttl_dns.sh`):
+Baris `sed` mengganti record A sekaligus menetapkan TTL 15 detik. Serial SOA
+kemudian dinaikkan satu angka. Sebelum zona dimuat ulang, `named-checkzone`
+memeriksa format file zona.
+
+Pengamatan cache dilakukan dari `alpha` menggunakan resolver lokal `dnsmasq`.
+Resolver tersebut meneruskan query ke DNS master `10.64.1.2`:
 
 ```bash
-#!/bin/sh
-# FASE 1: Sebelum Perubahan (Target: IP Lama 10.64.2.2)
-dig abbey.k01.com +short
-# FASE 2: Dalam Jeda Waktu TTL 15 Detik (Masih IP Lama)
-dig abbey.k01.com +short
-# Menghitung mundur 16 detik agar TTL cache habis
-sleep 16
-# FASE 3: Setelah TTL Habis (Target: IP Baru 10.200.200.1)
-dig abbey.k01.com +short
+cat <<'EOF'> /etc/resolv.conf
+nameserver 127.0.0.1
+EOF
+
+service dnsmasq stop 2>/dev/null
+pkill dnsmasq 2>/dev/null
+dnsmasq --no-poll --no-resolv -h \
+  --listen-address=127.0.0.1 --server=10.64.1.2
+```
+
+Hasil pengujian terdiri atas tiga fase:
+
+1. **Sebelum perubahan:** query mengembalikan IP lama `10.64.2.2`.
+2. **Dalam 15 detik pertama:** meskipun record di `prab` sudah berubah, query
+   masih mengembalikan `10.64.2.2` karena jawaban lama masih tersimpan di cache.
+3. **Setelah TTL habis:** query berikutnya mengembalikan IP baru
+   `10.200.200.1`.
+
+Pemantauan perubahan TTL dilakukan dengan perulangan berikut:
+
+```bash
+for i in $(seq 1 35); do
+  echo "$(date +%T) -> $(dig abbey.k01.com +noall +answer \
+    | awk '{print "TTL="$2, $5}')"
+  sleep 1
+done
+```
+
+Perulangan tersebut menampilkan waktu, sisa TTL, dan IP hasil query setiap satu
+detik. Perubahan IP terlihat setelah TTL habis.
+
+Dokumentasi pengujian:
+
+- 3 Fase
+![Pengujian perubahan A record dan TTL cache](assets/alpha-25.gif)
+
+Setelah pengujian selesai, record dikembalikan ke alamat awal menggunakan
+`nodes/prab/reset-18.sh`. Serial SOA kembali dinaikkan dan zona dimuat ulang.
+
+Cuplikan pemulihan record:
+
+```bash
+sed -i 's/^abbey.*/abbey   15   IN   A   10.64.2.2/' $ZONE_FILE
+named-checkzone k01.com $ZONE_FILE && rndc reload
+```
+
+### 19. CNAME outbound menuju domain eksternal
+
+Record CNAME `outbound.k01.com` ditambahkan pada zona `k01.com` di `prab`.
+Record tersebut mengarahkan domain internal ke `http.badssl.com`:
+
+```dns
+outbound IN CNAME http.badssl.com.
+```
+
+Konfigurasi ini diterapkan oleh `nodes/prab/quest-19.sh`. Setelah zona DNS
+dimuat ulang, pengujian dilakukan dari client menggunakan:
+
+```bash
+dig outbound.k01.com CNAME
+curl -H "Host: http.badssl.com" http://outbound.k01.com
+```
+
+Query DNS menunjukkan `outbound.k01.com` sebagai alias
+`http.badssl.com`. Request HTTP menampilkan konten dari halaman tujuan.
+
+![Pengujian CNAME outbound](assets/alpha-26.png)
+
+### 20. Pemeriksaan service dan autostart
+
+Pemeriksaan akhir dilakukan pada setiap node sesuai service yang digunakan.
+`bind9` diperiksa pada `prab`, `nginx` dan `php8.4-fpm` pada `oblada` serta
+`molly`, sedangkan `apache2` diperiksa pada `obladi`, `desmond`, dan `penny`.
+Status `running` menunjukkan service sedang berjalan.
+
+Pada `prab`:
+```bash
+service bind9 status
+```
+
+Pada `oblada` dan `molly`:
+```bash
+service nginx status
+service php8.4-fpm status
+```
+
+Pada `obladi`, `desmond`, dan `penny`:
+```bash
+service apache2 status
 ```
