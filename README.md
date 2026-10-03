@@ -677,7 +677,7 @@ nslookup -type=txt alpha.k01.com
 nslookup -type=txt beta.k01.com
 nslookup -type=txt gamma.k01.com
 nslookup -type=txt delta.k01.com
-nslookup -type=txt epilson.k01.com
+nslookup -type=txt eplison.k01.com
 ```
 
 Jalankan DNS dari masing-masing node klien:
